@@ -1,17 +1,14 @@
 %-*-coding: utf-8-*-
-\chapter{Решение задачи поиска расстояний между каждой парой вершин графа}
+\chapter{All-pairs shortest distance problem}
 
-В этой главе будет приведено решение задачи поиска расстояний между каждой парой вершин. В начале главы будет краткий обзор предметной области, после будут приведены два наивных решения для поиска пути, а после комбинацией будет приведено решение задачи для социальных неориентированных невзвешенных графов, которое будет сочетать несколько подходов и идей, изложенных в предыдущих алгоритмах. 
 
-\FloatBarrier
-\section{Обзор существующих решений}
 
-\subsection{Алгоритм Флойда}
-Одним из наиболее известных алгоритмов, который применяется для решения данной задачи является алгоритм Флойда. Этот алгоритм использует идею динамического программирования и выполняется за $O(V^3)$. Основная идея состоит в обновлений пути между двумя текущими вершинами выбором некоторой вершины, через который может пройти потенциальный кратчайший путь. Псевдокод алгоритма приведен ниже. 
+\section{Floyd-Warshall algorithm}
+The most popular algorithm. $O(V^3)$
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Алгоритм Флойда}\label{floyd}
+\caption{Floyd-Warshall}\label{floyd}
 \begin{algorithmic}[1]
 \Procedure{Floyd}{$G$}
 \State $dist\gets \left\{ {   \left\{ {\infty \ldots \infty}\right\}  \ldots \left\{ {\infty \ldots \infty}\right\} }\right\}$
@@ -32,19 +29,12 @@
 \end{algorithm}
 
 \FloatBarrier
-\subsection{Альтернативы}
-В некоторых случаях оказываются эффективны другие подходы. Например, можно для каждой вершины по отдельности запустить некоторых алгоритм поиска кратчайшего пути до всех остальных вершин. Для случая неотрицательных ребер можно применить алгоритм Дейкстры, в более общем случае может быть применен Беллман-Форд. Кроме вышеприведенных подходов также известен алгоритм Джонсона, который работает на графах без циклов отрицательного веса и находит кратчайшие расстояния за время $O(V^2 \log(V) + VE)$. Все эти подходы оказываются эффективны в случае разреженных графов.
-
-В последующих подходах в качестве основы для параллельного алгоритма будет использоваться именно идея подсчета расстояний либо для каждой вершины по отдельности, либо подсчета расстояний для групп вершин. И все нижеперечисленные алгоритмы, как и описанные выше альтернативы хорошо работает на разреженных графах.
-
-\FloatBarrier
-\section{Наивная параллельная версия}
-Первая версия заключается исключительно в запуске Беллмана-Форда для каждой из вершин. При этом заметим, что так как каждый из них независим друг от друга, то можем эти запуски распараллелить между собой. Таким образом, псевдокод из себя представляет следующее
-
+\section{First parallel version}
+Idea : run parallel Bellman-Ford from every vertex. At the same time use simple scheduling for our computation
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Наивная параллельная версия}\label{all_pairs_par1}
+\caption{First parallel version}\label{all_pairs_par1}
 \begin{algorithmic}[1]
 \Procedure{AllPairsPar1}{$G$}
 \State \textbf{return} {\Call {HandleVertices}{$G, 0, |G.vertices|$}}
@@ -70,35 +60,35 @@
 \end{algorithm}
 
 \FloatBarrier
-\section{Параллельный алгоритм для объединенного графа}
-Развитием предыдущей идеи является наблюдение, что для некоторого набора вершин можем построить общий граф и запустить на нем Беллмана-Форда, что потенциально может повысить производительность за счет высокой параллельности каждого отдельно взятого Беллмана-Форда. Кроме того, это избавит нас от выбора константы для предыдущей версии, что упростит использование алгоритма для пользователя. 
+\section{Second parallel version}
 
-Идея заключается в запуске алгоритма Беллман-Форд на графе, вершины которого описываются двумя значениями - текущей вершины в обходе и вершины, из которой этот обход начался (иными словами, вершины, из которой мы ищем кратчайшие расстояния). После построения графа будет достаточно запустить обход, при этом положив в Frontier все вершины вида $(i, i)$. В итоге кратчайшее расстояние для вершины $(i, j)$ будет интерпретироваться как кратчайшее расстояние от вершины $i$ до вершины $j$ в исходном графе. 
+The potential improvement of the idea above was to calculate distance for group of vertices at the same time. How does we achieve it? All we have to do is to create a large graph consisting of $V^2$ vertices. Every vertex of that graph are of the form $(i, j)$, where $i$ - current vertex id (the same as in the initial graph), $j$ - vertex from which the shortest distance is calculating. And when we're performing Bellman-Ford we have to push all the vertices of form $(i, i)$ to the first Frontier. Afterwards the process would be the same as before. Finally, when we've done with algorithm, the shortest distance $d$ to vertex $(i, j)$ means that shortest distance in the initial graph from the vertex $j$ to vertesx $i$ equals to $d$.
 
-Однако, как будет показано позднее, такой подход на практике оказался медленнее наивной версий. Но при этом идея обработки ряда вершин одновременна легла в основе следующего алгоритма для социальных графов. 
-\FloatBarrier
-\section{Параллельный алгоритм для социальных графов}
-В данной главе будет рассмотрен алгоритм поиска кратчайшего пути между каждой парой вершин для графов реальных социальных сетей. При этом рассмотренный граф будет невзвешенный и неориентированный. Кроме того, в этой главе будет затронута структура данных, уже ранее используемая в параллельном обходе в ширину. Будет описан ее интерфейс и принцип работы. 
+Unfortunately as we'll see in the following chapters this algorithms occurs to be slower than previous one. However the idea of calculating distances for the group of vertices underlies the following algorithms for social graphs. 
 
 \FloatBarrier
-\subsection{Идея алгоритма}
-В графах для социальных сетей известна одна эвристика, которая называется "Теория шести рукопожатий". В ее основе лежит тот факт, что практически любые два человека на земле знакомы не более, чем через пятерых промежуточных людей. Таким образом, выбрав некоторую случайную вершину, мы сможем добраться от нее до большинства других вершин не более, чем за 6 ребер. Воспользуемся этой эвристикой в нашем алгоритме и выберем вершину наибольшей степени в качестве базовой. И будем обрабатывать два множества различным образом - для меньшего (вершины, которые находятся на расстоянии больше шести) будем запускать параллельный обход в ширину для каждой вершины, для большого - воспользуемся методом динамического программирования для подсчета ответа. 
-
-Но прежде, чем приступить к описанию непосредственно алгоритма опишем структуру данных, предложенную Майком Рэйни и Умутом Акаром для обработки множества ребер на нескольких ядрах - Фронтир (Frontier, англ.)
+\section{Third parallel version. Algorithm for social graphs}
+In the following chapter I will describe algorithms to calculate all-pairs distances for social undirected unweighted graphs.   
 
 \FloatBarrier
-\subsection{Структура данных Фронтир}
-Структура данных подробно рассмотрена в статье Умут Акара. Здесь же приведено краткое ее описание, основные принципы работы и интерфейс. Фронтир представляет из себя некоторый набор ребер. При этом он поддерживает операций разделения множества пополам, слияния множеств, добавления ребер вершины и итерирования по ребрам. При этом  операций слияния и разбиения выполняются за время пропорциональное $O(\log n)$, добавление ребер вершины происходит за константу, а итерирование за константу для каждого ребра. Такая асимптотика достигается за счет лежащей в основе bootstrapped chunked sequence, которая представляет из себя последовательность, где каждому элементу сопоставляется его вес. И операций слияния и разбиения выполняются в соответсвии с этими весами и выполняются за $O(\log n)$. Более подробное описание bootstrapped chunked sequence приведено в статье. 
+\subsection{Idea}
+The algorithm is based on a well-known theory "Six degrees of separation" (\url{https://en.wikipedia.org/wiki/Six_degrees_of_separation}). According to that the distance beetwen any two vertices in social graph in general is quite small. So the algorithm would use this fact and calculate distances for two sets separately - for a big set of near vertex to some specific base vertex and for remaining vertices. For the big set the algorithm will use dynamic programming and for the small one it will use previous approaches. 
 
 \FloatBarrier
-\subsection{Работа алгоритма}
-Как уже было отмечено ранее, работа алгоритма разбивается на три этапа - анализ графа и выбор базовой вершины, обработка меньшего множества и обработка большего. Разберемся с каждым этапом по отдельности.
+\subsection{Algorithm}
+The algorithm consists of three phases
 
-Первый и самый простой этап состоит в выборе базовой вершины. В качестве нее будет выбрана вершина с наибольшей степенью. После этого из этой вершины будет запущен обход в ширину, который найдет все вершины, отстоящие не более, чем на $K$ (в описанном в предыдущем пункте случае $K = 6$). Таким образом, все такие вершины попадают в множество, которое будет обработано на третьем этапе алгоритма. Все остальные вершины попадают в второе множество. Псевдокод этого этапа выглядит следующим образом
+\begin{enumerate}
+  \item Graph analysis and base vertex selection 
+  \item Small set handling
+  \item Big set handling
+\end{enumerate}
+
+First phase is the easiest one. The pseudocode is below ($K$ in pseudocode is the max distance from the base vertex to be handled by it)
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Первая фаза алгоритма}\label{all_pairs_social1}
+\caption{First phase}\label{all_pairs_social1}
 \begin{algorithmic}[1]
 \Procedure{ConstructSets}{$G$}
 \State {$baseVertex \gets $ vertex with max degree}
@@ -119,24 +109,15 @@
 \end{algorithmic}
 \end{algorithm}
 
+Second phase is essentially the First parallel algorithm (parallel Bellman-Ford from every vertex) but not for the whole set of vertices but for the $otherVertexSet$.
 
+Third phase is based on the dynamic programming. Let's first write down some observations. 
 
+Consider some vertex $i$ such that $dist[baseVertex][i] = d$. For which vertices $j$ the statement $dist[i][j] = s$ may turns to be true? It may appear only for vertices $j$ such that $s - d \leq dist[baseVertex][j] \leq s + d$. It means that if we perform a BFS and put every vertex from $handleByBaseVertexSet$ to initial set then during this BFS the vertex $j$ may appear only on layers $[t-K, t+K]$ where $t = dist[baseVertex][j] $. Therefore we may put every vertex to all the possible layers for that vertex (this amount of layers is not more than $2K+1$ what is generally very small number). And thus build a Frontier for every layer. Afterwards we'll use the classic technique to handle Frontier in parallel. But for now we haven't touched the idea of dynamic programming. Let's see how it may be useful in our case. 
 
-В качестве алгоритма для обработки второго множества запустим параллельный обход в ширину (он же Беллман-Форд) для каждой из вершин этого множества. Кроме того запустим обход для базовой вершины. Эти значения расстоянии нам помогут на третьем этапе алгоритма. На этом этапе используется просто Алгоритм 7 для множества $otherVertexSet$. 
-
-Для поиска искомых значении для вершин множества $handleByBaseVertexSet$ воспользуемся методом динамического программирования. Но сперва обсудим основные принципы построения алгоритма и доказательство его корректности. 
-
-Рассмотрим некоторую вершину, которая находится на расстояний $d$ от базовой вершины ($d \leq K$). То какие вершины для нее могут находится на расстоянии $i$? Это могут быть только те вершины, которые находятся на расстоянии $[i-d, i+d]$ от базовой. Иначе бы не выполнялось свойство, что путь кратчайший. С другой стороны, если рассмотреть некоторую вершины, расстояние до которой равняется $i$, то для всех вершин из множества $handleByBaseVertexSet$ верно, что кратчайшее расстояние от них до нее варьируется в промежутке $[i-K, i+K]$. 
-
- Предположим, что мы запустили обход в ширину из всех вершин большого множества. То какие вершины могут быть в слое с номером $i$? Ответ вытекает из рассуждений предыдущего абзаца - только вершины, расстояние от которых до базовой варьируется в промежутке $[i-K, i+K]$. То есть каждая из вершин будет принимать участие в не более, чем $2K+1$ слоях. То построим для каждого слоя обхода в ширину множество возможных вершин на этом слое. Это избавит нас от построения следующего фронтира по текущему. И при этом общее количество вершин во всех слоях будет пропорционально числу вершин в графе (если учитывать, что $K$ - небольшое число, меньшее 7). 
+ During the computation we are dealing with two dynamics. First is $mask[u][i]$ - the bitset of vertices such that the distance from them to $u$ is equals to $i$. Second is $calc[u][i]$ - the bitset of vertices such that distance from them to $u$ is less than $i$. Bitsets only have to support logical operation (or, and, not) and setting/getting the value in specific bit. For every vertex in $handleByBaseVertexSet$ there is a  bit that corresponds to the vertex (we have a bijection beetwen vertices in set and bits in bitset).  Obvious observation is that for every vertex $u$ we have to store only $2K+1$ bitsets (follows from the previous paragraph). 
  
- После того, как мы построили набор вершин для каждого из слоев мы можем воспользоваться структурой Фронтир для эффективного распараллеливания процесса обработки ребер, исходящих из этих вершин. Но к текущему моменту мы никак не воспользовались тем фактом, что вершины расположены близко друг к другу, и, может быть, существует способ для оптимальной обработки группы вершин. Такой подход существует и основан на идее динамического программирования и применения битовых векторов. 
- 
- Будем поддерживать две динамики. Значениями в полях массива будут битовые вектора - это некоторая структура, где каждый из битов соответсвует вершине из множества $handleByBaseVertexSet$. Первая из динамик $mask[u][i]$ - это битовый вектор вершин, расстояние от которых до $u$ равно $i$. Вторая из динамик $calc[u][i]$ - набор вершин, расстояние от которых до $u$ не более, чем $i$. 
- 
- Рассмотрим процесс пересчета значений динамики. Для подсчета текущего значения $mask[v][i]$ воспользуемся формулой (2.1). Обратим внимание, что битовые вектора должны поддерживать битовые логические операции. 
-  
-%mask[v][i] = \bigvee (mask[u][i - 1] where \exists edge u->v) AND (
+ Let's see how we calculate dynamics. It's easy to realise these formulas (2.1 for mask and 2.2 for calc).
 
 \FloatBarrier
 \begin{equation}
@@ -144,26 +125,26 @@ mask[v][i] = \neg calc[v][i - 1] \wedge \bigvee_{\exists (u, v) \in E} mask[u][i
 \end{equation}
 \FloatBarrier
 
-В свою очередь calc пересчитывается согласно (2.2)
 \FloatBarrier
 \begin{equation}
 calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \end{equation}
 \FloatBarrier
 
-Псевдокод пересчета значений динамики представлен ниже. Обратим внимание, что для каждой вершины нам достаточно хранить всего $2K + 1$ битовых векторов. Однако для упрощения понимания псевдокода будем обращаться к $i$ слою вершины $u$ просто как $mask[u][i]$, при этом имея в виду эту значительную оптимизацию по памяти. Кроме того другим важным замечанием является то, что когда нам необходимо посчитать значения динамики для слоя $i$, то нам необходимо обрабатывать предыдущий слой. Таким образом в последнем цикле алгоритма для обработки $layerToCalc$ мы используем $frontierLayer \gets layerToCalc - 1$.
+These calculations present at the pseudocode below. Pay attention that for every vertex we have to store only $2K + 1$ bitsets. But for better understanding we do not deal with such an implementation details and access to $j$ layer of vertex $i$ just by calling $mask[i][j]$. Another notice is that for the calculation of values of layer $i$ we have to handle Frontier from the previous layer $i-1$. That's why we have $layerToCalc$ and $frontierLayer = layerToCalc - 1$ in the last loop.
+
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Пересчет динамики}\label{all_pairs_social2}
+\caption{Dynamics calculation}\label{all_pairs_social2}
 \begin{algorithmic}[1]
-\State $ K \gets 6$ \Comment{Максимальная глубина до базовой вершины}\ldots
+\State $ K \gets 6$ \Comment{Max deep to baseVertex}\ldots
 \State
 
 \Procedure{CalculateDistancesForBigSet}{$G, baseVertex, handleByBaseVertexSet$}
 \State {$maxLayer \gets $ calculate max distance from baseVertex}
-\State {$Frontiers \gets \left\{ {Frontier_0 \ldots Frontier_{maxLayer + K}}\right\} $} \Comment{Фронтир для каждого уровня обхода} 
-\State {$VertexSets \gets \left\{ {VertexSet_0 \ldots VertexSet_{maxLayer + K}}\right\} $} \Comment{Набор вершин для каждого уровня} 
+\State {$Frontiers \gets \left\{ {Frontier_0 \ldots Frontier_{maxLayer + K}}\right\} $} \Comment{Frontier for every BFS layer} 
+\State {$VertexSets \gets \left\{ {VertexSet_0 \ldots VertexSet_{maxLayer + K}}\right\} $} \Comment{VertexSet for every BFS layer} 
 \State $mask\gets \left\{ {   \left\{ {bitVector(0) \ldots bitVector(0)}\right\}  \ldots \left\{ {bitVector(0) \ldots bitVector(0)}\right\} }\right\}$ 
 \State $calc\gets \left\{ {   \left\{ {bitVector(0) \ldots bitVector(0)}\right\}  \ldots \left\{ {bitVector(0) \ldots bitVector(0)}\right\} }\right\}$
 \State
@@ -177,8 +158,7 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \State
 
 \For{$v \in handleByBaseVertexSet $}
-	\State $mask[v][0] \gets bitVector(bitNum(v))$ \Comment{Будем считать, что существует функция bitNum, которая по номеру вершины возвращает соответсвующий ей бит} 
-
+	\State $mask[v][0].setBit(bitNum(v), 1)$ \Comment{Let's assume that we have a function $bitNum$ which by input vertex returns the index of corresponding bit in bitsets} 
 \EndFor 
 \State
 \For{$layerToCalc = 1$ to $maxLayer + K$}
@@ -203,9 +183,9 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \end{algorithm}
 \FloatBarrier
 
-Псевдокод обработки текущего Фронтира представлен ниже. В этом алгоритме мы пользуемся интерефейсом, который предоставляет библиотека для параллельных вычислений Pasl. А именно для взаимодействие между рабочими потоками существует служебные функции, дающие понять потокам необходимость разбиения фронтира для обработки на других ядрах или же наоборот. 
+Pseudocode of Frontier handling:
 \begin{algorithm}
-\caption{Обработка Фронтира}\label{all_pairs_social3}
+\caption{Frontier handling}\label{all_pairs_social3}
 \begin{algorithmic}[1]
 
 \Procedure{ProcessLayerLazy}{$G, Frontier, mask, layer, dists, baseVertex$}
@@ -243,20 +223,19 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 
 
 \FloatBarrier
-Наконец, как по имеющимся данным динамики восстановить ответ? Для каждого значения $mask[u][i]$ найдем единичные биты в маске. Установленный в единицу бит $j$ говорит о том, что расстояние от вершины из "большого" множества с идентификатором $j$ до вершины $u$ равно $i$. Таким образом, мы сможем полностью восстановить ответ для каждой вершины. 
+Finally how we can restore an answer by this dynamic? For every $mask[u][i]$ we'll find all the one-bits. The one-bit in position $j$ says that the distance from the vertex $v$ (with $bitNum(v) = j$) to vertex u is equal to $i$. That's how we can fill the answer.
 
-
-Итого, псевдокод алгоритма выглядит следующим образом.
+The final pseudocode looks like this:
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Параллельная версия для социальных графов}\label{all_pairs_social}
+\caption{Parallel algorithm for social graphs}\label{all_pairs_social}
 \begin{algorithmic}[1]
 
 \Procedure{AllPairsSocialPar}{$G$}
 \State $dist\gets \left\{ {   \left\{ {\infty \ldots \infty}\right\}  \ldots \left\{ {\infty \ldots \infty}\right\} }\right\}$
 \State {$ baseVertex, handleByBaseVertexSet, otherVertexSet \gets ConstructSets(G)$}
-\State {\Call {AllPairsPar1}{$G, otherVertexSet, dist$}} \Comment {Наивный алгоритм для множества вершин}
+\State {\Call {AllPairsPar1}{$G, otherVertexSet, dist$}} 
 \State {\Call {CalculateDistancesForBigSet}{$G, baseVertex, otherVertexSet, dist$}}
 
 \State
@@ -281,45 +260,38 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 
 
 \FloatBarrier
-\subsection{Сравнение с наивными версиями}
+\subsection{Algorithms comparison}
 
-Обратим внимание, что асимптотически этот подход не отличается от предыдущих. Однако у него есть ряд преимуществ. 
+The last algorithm doesn't have better asymptotic time, but it has several advantages.
 
 \begin{itemize}
-  \item Пересчет расстояний для группы вершин выполняется быстрее за счет битовых операций. Хоть это и не сказывается на асимптотику, но на практике дает заметный выигрыш. 
-  \item Все битовые операции выполняются без выделения дополнительной памяти. При этом изменяются уже созданные поля в массиве для подсчета динамики
-  \item Так как каждый из фронтиров уже построен, то нам не приходится строить следующий фронтир по предыдущему в процессе обработки
-  \item Каждый из получившихся фронтиров довольно большой, что увеличивает его способность к параллелизации
-  \item Все остальные этапы также хорошо параллелятся
+  \item Distance calculation performs faster than before because of bit operations (and, or, not).
+  \item All the bit operations don't require any extra memory allocated. Once we allocated the memory we do all the operations right there.
+  \item We don't have to do job of merging frontier during the calculations. All the frontier have already been built during the initialisation phase. 
+  \item All the frontier are big enough what increase their ability to be parallelised.
+  \item All the other phases are good to be parallelised as well.
 \end{itemize}
 
-Таким образом мы имеем полные основания предполагать, что этот алгоритм на практике покажет заметно лучшие результаты по сравнению с предыдущими версиями. 
-
-Для подтверждения этих гипотез все алгоритмы были реализованы и протестированы на той же машине, о которой шла речь в предыдущей главе в контексте Беллмана-Форда.
-
-В качестве графа для тестирования был взят подграф твиттера из 81306 вершинами и 4841532 ребрами. При этом для каждого из ребер считалось неориентированным. Для сравнения алгоритм были взяты два алгоритма - наивная версия и последний описанный алгоритм. Результаты запуска приведен в таблице \ref{table:algo_floyd_comparison}.   
+To prove these advantages on practice I've implemented algorithms and tested them on Twitter subgraph with 81306 vertices and 4841532 edges (undirected; unweighted). Results are in the table \ref{table:algo_floyd_comparison} 
 
 
 \FloatBarrier
-\begin{table}
+\begin{table}[H]
 \centering
 
 \begin{tabular}{l|c}  
-Алгоритм & Twitter graph\\
+Algorithm & Twitter graph\\
 \hline\hline
-Наивная параллельная версия & 427.217 \\  
-Алгоритм для социальных графов & 210.322  \\
+First parallel algorithm & 427.217 \\  
+Algorithm for social graphs & 210.322  \\
 \hline
 \end{tabular}
 
-\caption{Сравнение алгоритмов}
+\caption{Algo comparison}
 \label {table:algo_floyd_comparison}
 \end{table}
 \FloatBarrier
 
-Как мы видим мы получили прирост производительности более, чем в два раза.
-
-\FloatBarrier
-\section{Выводы}
-Таким образом в этой части мы описали алгоритм для поиска кратчайшего расстояния на разреженных графах в общем случае (наивная версия) и для частного случая для социальных графов. 
+As we see we have more than 2x speedup. 
+ 
 \FloatBarrier

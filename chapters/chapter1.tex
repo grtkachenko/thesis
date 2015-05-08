@@ -1,30 +1,13 @@
 %-*-coding: utf-8-*-
-\chapter{Решение задачи поиска кратчайшего расстояния от фиксированной вершины до всех остальных}
-\label{chapSVD}
-
-В данной главе описаны алгоритмы по решению классической задаче на графах - поиску кратчайших расстояний от одной вершины до всех остальных. В первой части главы представлен краткий обзор предметной области. Во второй параллельные модификации алгоритма Беллмана-Форда. 
-
-\FloatBarrier
-\section{Обзор существующих решений}
-\subsection{Алгоритм Дейкстры}
-
-Одним из наиболее заметных алгоритмов для решения данной задачи является алгоритм Дейкстры. Придуманный еще в 1959 году Эдсгером Вибе Дейкстрой он сохраняет свою актуальность и по сей день. Основная идея состоит в последовательном пополнении множества вершин, расстояние для которых уже корректно посчитано. При этом на каждом шаге выбирается вершина, которая находится ближе остальных к уже посчитанному множеству. 
-
-Существует множество модификации алгоритма основанных на различных структурах данных для выбора вершины с минимальный расстоянием на каждом из шагов алгоритма. В зависимости от этого алгоритм может работать $O(V^2+E)$, $O(E \log V)$ или $O(V \log V+E)$. 
-
-Основная проблема алгоритма состоит в том, что он работает только на графах с неотрицательным весом ребер. С этой проблемой справляется алгоритм Беллмана-Форда. 
+\chapter{Shortest path from one vertex to every other}
 
 
 \FloatBarrier
-\subsection{Алгоритм Беллмана-Форда}
-
-Классический алгоритм Беллмана-Форда работает на графах с произвольным весом ребер, однако имеет заметно худшую асимптотику по сравнению с алгоритмом Дейсктры - $O(VE)$. 
-
-Основная идея алгоритма основана на идее динамического программирования. После k итерации алгоритма утверждается, что будут корректно посчитаны и обработаны значения веса путей длиной не более K. И после V итерации расстояние до каждой из вершин посчитано корректно. Ниже приведен каноничный псевдокод алгоритма. 
+\section{Classic sequential Bellman-Ford}
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Классический алгоритм Беллмана-Форда}\label{bf_classic_seq}
+\caption{Classic Bellman-Ford}\label{bf_classic_seq}
 \begin{algorithmic}[1]
 \Procedure{ClassicBellmanFord}{$G,start$}
 \State {$dist \gets \left\{ {\infty ... \infty}\right\}$}
@@ -41,16 +24,16 @@
 \end{algorithm}
 
 \FloatBarrier
-Кроме того существует интересная модификация алгоритма, которая поддерживает на каждой итерации набор вершин, расстояние до которых изменились на предыдущем шаге алгоритма. Из очевидных соображений мы имеем право рассматривать только эти и никакие другие вершины. Этот алгоритм на практике зачастую работает заметно быстрее чем классическая версия в некоторых случаях, но об этом подробно будет описано позднее. Будем называть эту версию BFS-подобный Беллман-Форд. Ниже приведен псевдокод алгоритма 
+\section{BFS-like sequential Bellman-Ford}
 
 \FloatBarrier
 \begin{algorithm}
-\caption{BFS-подобный Беллман-Форд}\label{bf_bfs_seq}
+\caption{BFS-like BellmanFord}\label{bf_bfs_seq}
 \begin{algorithmic}[1]
 \Procedure{BFSBellmanFord}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
 \State $dist[start] \gets 0$
-\State $CurrentVertexSet \gets \left\{ {start}\right\}$\Comment{структура данных для хранения набора вершин} 
+\State $CurrentVertexSet \gets \left\{ {start}\right\}$\Comment{Set of vertices the distance to which has just been updated} 
 \State $NextVertexSet \gets \emptyset$ 
 \State {$step \gets 0$ }
 \While {$step < |G.vertices|$ \algorithmicand \algorithmicnot $ CurrentVertexSet.empty()$}
@@ -58,7 +41,7 @@
 	\State $NextVertexSet.clear()$
 	
 	\For{$v \in CurrentVertexSet$}
-		\For{$e \in G.edgesFrom[v] $} \Comment{исходящие ребра из текущей вершины} 
+		\For{$e \in G.edgesFrom[v] $} \Comment{Outgoing edges of current vertex} 
 			\If {$dist[e.to] < dist[e.from] + e.w$} 
 				\State $dist[e.to] \gets dist[e.from] + e.w$
 				\State $NextVertexSet.insert(e.to)$								
@@ -74,24 +57,15 @@
 \end{algorithmic}
 \end{algorithm}
 
-\FloatBarrier
-\subsection{Другие алгоритмы}
-
-Также известны специализированные алгоритмы, такие как алгоритм A* и D*, которые оперирует большими специализированными графами и используют ряд эвристик для поиска расстояний. При этом в контексте наших исследований они затронуты не будут.
 
 \FloatBarrier
-\section{Параллельный алгоритм Беллмана-Форда}
-
-В предыдущей главе были рассмотрены классические алгоритмы поиска кратчайших путей в графе. В этой главе будет рассмотрен алгоритм Беллмана-Форда в контексте параллельных вычислений. Кроме того будем использовать в каждом из алгоритмов идею ранней остановки - если на текущем шаге ни одно из значений массива расстояний не изменилось, то имеем право выйти из основного цикла. В последующих главах будет представлено несколько версий алгоритма, а также их последующее сравнение и рекомендации по использованию.  
-
-\FloatBarrier
-\subsection{Параллелизация по ребрам вершины}
-Первая версия алгоритма основана на параллельной обработке всех ребер, исходящих из текущей вершины. Псевдокод, который практически не отличается от классической версии, приведен ниже. 
+\subsection{Parallel Bellman-Ford by edges of current vertex}
+Idea : use parallel min reduce for incoming edges of current vertex   
 
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Параллельный Беллман-Форд по ребрам вершины}\label{bf_classic_par1}
+\caption{Parallel Bellman-Ford by edges of current vertex}\label{bf_classic_par1}
 \begin{algorithmic}[1]
 \Procedure{BellmanFordPar1}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
@@ -101,19 +75,18 @@
 	\State {$changed \gets $ \algorithmicfalse}
 	\For{$v \in G.vertices $}
 		\algrenewcommand\algorithmicfor{\textbf{parfor}}
-		\For{$e \in G.fromEdges[v] $} 
-			\If {$dist[e.to] < dist[e.from] + e.w$} 
-				\State $dist[e.to] \gets dist[e.from] + e.w$
-				\State {$changed \gets $ \algorithmictrue}						
-			\EndIf
-		\EndFor	
+		\State {$minDist \gets $ min reduce by G.inEdges[v]} 
+		
+		\If {$dist[v] > minDist$} 
+			\State $dist[v] \gets minDist$
+			\State {$changed \gets $ \algorithmictrue}						
+		\EndIf
 		\algrenewcommand\algorithmicfor{\textbf{for}}
 
 	\EndFor
 	\If {\algorithmicnot $changed$} 
 		\State $break$
 	\EndIf
-
 \EndFor
 \State \textbf{return} $dist$
 \EndProcedure
@@ -121,12 +94,14 @@
 \end{algorithm}
 
 \FloatBarrier
-\subsection{Параллелизация по всем ребрам}
-Идея второго алгоритма состоит в разбиений всего набора вершин на некоторые подмножества, каждое из которых будет обрабатываться отдельным процессором. При этом для каждой вершины будем рассматривать набор ребер, входящих в нее. Это необходимо для того, чтобы обновление фиксированной ячейки в массиве расстояний происходило только одним потоком. 
+\subsection{Parallel Bellman-Ford by all edges using prefixsum}
+
+Idea : use precalculated prefixsum to divide current vertex set for 2 sets, which will be handled by different threads
+
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Параллельный Беллман-Форд по всем ребрам}\label{bf_classic_par2}
+\caption{Parallel Bellman-Ford by all edges using prefixsum}\label{bf_classic_par2}
 \begin{algorithmic}[1]
 \Procedure{BellmanFordPar2}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
@@ -144,7 +119,7 @@
 \EndProcedure
 
 \State 
-\Procedure{BuildPlan}{$prefsum, startV, endV$}  \Comment{Функция возвращают структуру, которая по отрезку возвращает его середину}
+\Procedure{BuildPlan}{$prefsum, startV, endV$}  \Comment{This function returns a structure which tells us the middle of the segments (by index of start and end vertex)}
 \State {$resultMap \gets $ empty map}
 \State $edgesNumber \gets prefsum[endV] - prefsum[startV]$
 \If {$edgesNumber < threshold$} 
@@ -174,20 +149,19 @@
 \end{algorithm}
 
 \FloatBarrier
-\subsection{Параллелизация BFS - версии}
-Предыдущие две версии были основаны на параллелизации классической версии Беллмана-Форда. В основе следующего алгоритма лежит идея обхода в ширину (Алгоритм 2). В качестве основы для параллельной версии такого алгоритма был взят параллельный обход в ширину, предложенный Умутом Акаром и Майком Рэйни. Подробнее о внутреннем устройстве их подхода речь зайдет во 2 части работы в контексте решения задачи поиска расстояний между каждой парой вершин. Пока лишь приведем псевдокод 
+\subsection{Parallel BFS-like Bellman-Ford}
+Idea : use your PBFS to handle vertex distances
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Параллельный BFS-подобный Беллман-Форд}\label{bf_bfs_par}
+\caption{Parallel BFS-like Bellman-Ford}\label{bf_bfs_par}
 \begin{algorithmic}[1]
 \Procedure{BellmanFordPar3}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
 \State $dist[start] \gets 0$
-\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}\Comment{структура данных для хранения исходящих ребер текущего множества } 
-
+\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}
 \For{$i = 0$ to $|G.vertices| $}	
-	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier$}}} \Comment{релаксируем ребра из фронтира и строим новый} 
+	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier$}}} \Comment{relax edges from Frontier and build a new one} 
 	
 	\If { $Frontier.empty()$} 
 		\State $break$						
@@ -209,28 +183,25 @@
 
 
 \FloatBarrier
-\subsection{Сравнение подходов}
-Каждый из вышеизложенных подходов имеет свои особенности, что позволяет каждому из них конкурировать друг с другом на некоторых типах графов. Рассмотрим эти особенности.
+\subsection{Algo comparison}
+At the first sight it may seems that Algorithm 3 has only disadvantages. The main problem is that it has bad parallelisation ability compared to other two algorithms. But sometimes it works better even on 40-core machine because of one useful property. Let's consider a graph where all the edges have the from $i \rightarrow j$ where $i < j$. Once the iteration number $I$ has passed all the vertices till $I$ have correct target distance. It' easy to prove using mathematic induction. So it means that we have to perform only 2(!!!) loops in that case. One for calculating distance and one for understanding that nothing will change anymore. And let's assume that we have a dense graph. In that circumstances Algorithm 4 will suffer from great parallelism (the number of iterations of the main loop will increase significantly) and Algorithm 5 will have to handle the large set of vertices (because graph is dense) during the iterations. 
 
-С первого взгляда может показаться, что Алгоритм 3 имеет лишь одни недостатки - он имеет наименьшим образом по сравнению с последующими задействует все процессоры и при этом асимптотически равен остальным двум. Однако рассмотрим внимательнее каноничный аглоритм Беллмана-Форда и запустим его на плотном графе, где для каждого ребра верно, что индекс вершины источника меньше индекса вершины назначения. В этом случае каноничной версии достаточно будет сделать лишь две итерации внешнего цикла, поскольку на каждой итераций внутреннего цикла значение расстояния для текущей вершины будет корректно посчитано (очевидно доказывается по математической индукции). Так как количество итерации третьего алгоритма в подобных графах может быть значительным и размер текущей очереди может быть большим, а второму же алгоритму на таких графах неплохая способность параллелиться будет только вредить - она будет заметно увеличивать число итераций внешнего цикла. То есть в таких случаях последние два алгоритма работают хуже первого.   
+But anyway it's easy to see that in the most cases Algorithm 4 and Algorithm 5 will beat Algorithm 3. Let's compare them. As I said before Algorithm 5 will be not good enough when we're considering dense graphs, because of big size of queue. So the main recommendation of when to use these approaches is to realise if the graph is dense or sparse. In the first case you have to use Algorithm 4, otherwise Algorithm 5.
 
-Но очевидно, что в большинстве случаев последние два алгоритма будут показывать лучшие результаты. Сравним эти два подхода. Алгоритм, основанный на обходе в ширину, заметно сокращает количество вершин для обработки в пределах каждой итерации. Однако на плотных графах количество таких вершин значительно и такой подход показывает себя не с лучшей стороны. 
 
 \FloatBarrier
-\subsection{Тестирование}
+\subsection{Testing}
 
-Для подтверждения вышеприведенных замечаний все вышеизложенные подходы были реализованы на основе библиотеки для параллельных вычислений PASL. Тестирование производилось на ряде графов на машине 40-core Intel machine (with hyper-threading) with 4×2.4GHz Intel
-10-core E7-8870 Xeon processors, a 1066MHz bus, and 256GB of
-main memory. 
+Now we'll prove our assumptions on practice. I've implemented all the algorithms and compared them. Description of input graphs is presented in the Table 1.1. The results are presented in the Table 1.2
+\FloatBarrier
 
-Алгоритмы тестировались на различных графовых структурах, которые перечислены в Таблице 1.1. При этом описание для формата приведено внизу таблицы.
-\begin{table}
+\begin{table}[H]
 \centering
 
 \begin{tabular}{c|c|c}  
 Name & Vertices & Edges\\
 \hline\hline
-Complete TS & 7071 & 24995985 \\  
+CompleteTS sign(-) & 7071 & 24995985 \\  
 Complete sign & 3162 & 9995082  \\  
 BalancedTree fraction & 8388607 & 8388608 \\  
 SquareGrid sign & 2499561 & 4999122  \\  
@@ -243,20 +214,21 @@ RandomDense fraction(0.96) sign(+) & 5000 & 25000000  \\
 \multicolumn{3}{l}{\footnotesize \textit{fraction} - fraction of lexicographically sorted edges (edges of type X -> X+i) }\\
 \multicolumn{3}{l}{\footnotesize \textit{TS} - exists only Lexicographically Sorted edges (fraction = 1) }\\
 \multicolumn{3}{l}{\footnotesize }\\
-\multicolumn{3}{l}{\footnotesize  expression \textit{RandomDense fraction(0.5) sign} means Random Dense }\\
+\multicolumn{3}{l}{\footnotesize  expression "\textit{RandomDense fraction(0.5) sign}" means Random Dense }\\
 \multicolumn{3}{l}{\footnotesize 	graph with specified fraction and any sign of weights}\\
 \end{tabular}
 
 \caption{Input graph description}
 \label{bf_algo_comparison}
 \end{table}
+\FloatBarrier
 
-\begin{table}
+\begin{table}[H]
 \centering
 
 \begin{tabular}{l|ccc|cc|cc|ccc|ccc}  
 Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \multicolumn{2}{c}{SquareGrid} & \multicolumn{3}{c}{RandomSparse} & \multicolumn{3}{c}{RandomDense}\\
-& TS & + & - & 0.5 & 1 & + & +- & 0.5+  & 0.5- & 0.96+ & 0.5+ & 0.5- & 0.96+\\
+& TS- & + & - & 0.5 & 1 & + & +- & 0.5+  & 0.5- & 0.96+ & 0.5+ & 0.5- & 0.96+\\
 \hline\hline
 3 & 2.43 & 4.65 & nc & 116.31 & 9.04 & 5.49 & 13.40 & nc & nc & 24.35 & nc & nc & 5.01 \\  
 4 & 5.17 & 0.18 & 10.84 & 3.59 & 3.08 & 5.92 & 7.10 & 2.77 & 14.68 & 2.42 & 0.48  & 6.38  & 0.46 \\
@@ -269,9 +241,8 @@ Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \mul
 \end{table}
 
 \FloatBarrier
-\section{Выводы}
+\section{Conclusion}
 
-Из таблиц видно, что наши ожидания относительно применимости конкретных подходов оправдались. Первый из алгоритмов работает лучше на узком спектре графов с высоким fraction и высокой средней степенью вершины, второй хорошо работает на плотных графах и графах с отрицательным весом ребер, третий же заметно лучше остальных на разреженных графах.
+You can easily find out from tables that our assumptions were correct. Algorithm 3 works good for dense graph with very high fraction (almost 1), Algorithm 4 is good for dense graphs and for graphs with negative edges, Algorithm 5 is good for sparse graph with positive edges. 
 
-Таким образом сделав простой анализ структуры графа мы сможем выбрать необходимый алгоритм для поиска кратчайшего пути. 
 \FloatBarrier

@@ -18,6 +18,8 @@
 \usepackage{amsthm}
 \usepackage{amsfonts}
 \usepackage{xspace}
+\usepackage{hyperref}
+
 \usepackage{algorithm}
 \usepackage{algorithmicx}
 \usepackage{amsxtra} 
@@ -34,7 +36,7 @@
 %\usepackage{caption}
 %\usepackage{floatrow}
 \usepackage{caption}
-\captionsetup[table]{position=t,justification=raggedright,slc=off}
+\captionsetup[table]{name=Table}
 \makeatletter
 \def\BState{\State\hskip-\ALG@thistlm}
 \makeatother
@@ -59,23 +61,23 @@
 % system as theorem.
 
 \theoremstyle{plain}
-\newtheorem{theorem}{Теорема}
-\newtheorem{prop}[theorem]{Утверждение}
-\newtheorem{corollary}[theorem]{Следствие}
-\newtheorem{lemma}[theorem]{Лемма}
-\newtheorem{question}[theorem]{Вопрос}
-\newtheorem{conjecture}[theorem]{Гипотеза}
-\newtheorem{assumption}[theorem]{Предположение}
+\newtheorem{theorem}{Theorem}
+\newtheorem{prop}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{assumption}[theorem]{Assumption}
 
 \theoremstyle{definition}
 \newtheorem{definition}[theorem]{Определение}
 \newtheorem{notation}[theorem]{Обозначение}
 \newtheorem{condition}[theorem]{Условие}
 \newtheorem{example}[theorem]{Пример}
-\newtheorem{algo}[theorem]{Алгоритм}
+\newtheorem{algo}[theorem]{Algorithm}
 %\newtheorem{introduction}[theorem]{Introduction}
 
-\floatname{algorithm}{Алгоритм}
+\floatname{algorithm}{Algorithm}
 
 \algnewcommand\algorithmicand{\textbf{and}\xspace}
 \algnewcommand\algorithmicor{\textbf{or}\xspace}
@@ -136,32 +138,31 @@
 \pagestyle{title}
 
 \begin{center}
-Санкт-Петербургский национальный исследовательский университет \\ информационных технологий, механики и оптики
-
+ITMO University
 \vspace{2cm}
 
 Кафедра компьютерных технологий
 
 \vspace{3cm}
 
-{\Large Г. С. Ткаченко}
+{\Large Grigoriy Tkachenko}
 
 \vspace{2cm}
 
 \vbox{\LARGE\bfseries
-Параллельные алгоритмы поиска \\ кратчайшего пути в графе}
+Parallel shortest paths algorithms}
 
 \vspace{4cm}
 
-Бакалаврская работа 
+    
 
 \vspace{1cm}
 
-{\Large Научный руководитель: Г. А. Корнеев}
+{\Large }
 
-\vspace{5cm}
+\vspace{8cm}
 
-Санкт-Петербург\\ 2015
+Saint Petersburg\\ 2015
 \end{center}
 
 \newpage
@@ -206,17 +207,9 @@
 
 % Chapters
 \startthechapters
-\input{chapters/intro.tex}
 \input{chapters/chapter1.tex}
 \input{chapters/chapter2.tex}
-\input{chapters/outro.tex}
 
-%\startappendices
-%\label{appendix}
-%\input{appendix}
-
-\bibliographystyle{sty/utf8gost705u}
-\bibliography{thesis}
 
 \end{document}
 	
