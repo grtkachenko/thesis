@@ -68,11 +68,11 @@ Unfortunately as we'll see in the following chapters this algorithms occurs to b
 
 \FloatBarrier
 \section{Third parallel version. Algorithm for social graphs}
-In the following chapter I will describe algorithms to calculate all-pairs distances for social undirected unweighted graphs.   
+In the following chapter I will describe algorithm to calculate all-pairs distances for social undirected unweighted graphs.   
 
 \FloatBarrier
 \subsection{Idea}
-The algorithm is based on a well-known theory "Six degrees of separation" (\url{https://en.wikipedia.org/wiki/Six_degrees_of_separation}). According to that the distance beetwen any two vertices in social graph in general is quite small. So the algorithm would use this fact and calculate distances for two sets separately - for a big set of near vertex to some specific base vertex and for remaining vertices. For the big set the algorithm will use dynamic programming and for the small one it will use previous approaches. 
+The algorithm is based on a well-known theory "Six degrees of separation" (\url{https://en.wikipedia.org/wiki/Six_degrees_of_separation}). According to that the distance beetwen any two vertices in social graph in general is quite small. So the algorithm would use this fact and calculate distances for two sets separately - for a big set of near vertices to some specific base vertex and for remaining vertices. For the big set the algorithm will use dynamic programming and for the small one it will use previous approaches. 
 
 \FloatBarrier
 \subsection{Algorithm}
@@ -260,7 +260,7 @@ The final pseudocode looks like this:
 
 
 \FloatBarrier
-\subsection{Algorithms comparison}
+\section{Algorithms comparison}
 
 The last algorithm doesn't have better asymptotic time, but it has several advantages.
 

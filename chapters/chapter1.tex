@@ -59,7 +59,7 @@
 
 
 \FloatBarrier
-\subsection{Parallel Bellman-Ford by edges of current vertex}
+\section{Parallel Bellman-Ford by edges of current vertex}
 Idea : use parallel min reduce for incoming edges of current vertex   
 
 
@@ -94,7 +94,7 @@ Idea : use parallel min reduce for incoming edges of current vertex
 \end{algorithm}
 
 \FloatBarrier
-\subsection{Parallel Bellman-Ford by all edges using prefixsum}
+\section{Parallel Bellman-Ford by all edges using prefixsum}
 
 Idea : use precalculated prefixsum to divide current vertex set for 2 sets, which will be handled by different threads
 
@@ -149,7 +149,7 @@ Idea : use precalculated prefixsum to divide current vertex set for 2 sets, whic
 \end{algorithm}
 
 \FloatBarrier
-\subsection{Parallel BFS-like Bellman-Ford}
+\section{Parallel BFS-like Bellman-Ford}
 Idea : use your PBFS to handle vertex distances
 
 \FloatBarrier
@@ -183,14 +183,14 @@ Idea : use your PBFS to handle vertex distances
 
 
 \FloatBarrier
-\subsection{Algo comparison}
+\section{Algo comparison}
 At the first sight it may seems that Algorithm 3 has only disadvantages. The main problem is that it has bad parallelisation ability compared to other two algorithms. But sometimes it works better even on 40-core machine because of one useful property. Let's consider a graph where all the edges have the from $i \rightarrow j$ where $i < j$. Once the iteration number $I$ has passed all the vertices till $I$ have correct target distance. It' easy to prove using mathematic induction. So it means that we have to perform only 2(!!!) loops in that case. One for calculating distance and one for understanding that nothing will change anymore. And let's assume that we have a dense graph. In that circumstances Algorithm 4 will suffer from great parallelism (the number of iterations of the main loop will increase significantly) and Algorithm 5 will have to handle the large set of vertices (because graph is dense) during the iterations. 
 
 But anyway it's easy to see that in the most cases Algorithm 4 and Algorithm 5 will beat Algorithm 3. Let's compare them. As I said before Algorithm 5 will be not good enough when we're considering dense graphs, because of big size of queue. So the main recommendation of when to use these approaches is to realise if the graph is dense or sparse. In the first case you have to use Algorithm 4, otherwise Algorithm 5.
 
 
 \FloatBarrier
-\subsection{Testing}
+\section{Testing}
 
 Now we'll prove our assumptions on practice. I've implemented all the algorithms and compared them. Description of input graphs is presented in the Table 1.1. The results are presented in the Table 1.2
 \FloatBarrier
@@ -243,6 +243,6 @@ Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \mul
 \FloatBarrier
 \section{Conclusion}
 
-You can easily find out from tables that our assumptions were correct. Algorithm 3 works good for dense graph with very high fraction (almost 1), Algorithm 4 is good for dense graphs and for graphs with negative edges, Algorithm 5 is good for sparse graph with positive edges. 
+Assumptions were correct. Algorithm 3 works good for dense graph with very high fraction (almost 1), Algorithm 4 is good for dense graphs and graphs with negative edges, Algorithm 5 is good for sparse graph with positive edges. 
 
 \FloatBarrier
