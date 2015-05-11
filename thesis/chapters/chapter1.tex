@@ -20,7 +20,7 @@
 
 Классический алгоритм Беллмана-Форда работает на графах с произвольным весом ребер, однако имеет заметно худшую асимптотику по сравнению с алгоритмом Дейсктры - $O(VE)$. 
 
-Основная идея алгоритма основана на идее динамического программирования. После k итерации алгоритма утверждается, что будут корректно посчитаны и обработаны значения веса путей длиной не более K. И после V итерации расстояние до каждой из вершин посчитано корректно. Ниже приведен каноничный псевдокод алгоритма. 
+Основная идея алгоритма основана на идее динамического программирования. После $k$ итерации алгоритма утверждается, что будут корректно посчитаны и обработаны значения веса путей длиной не более $k$. И после $V$ итерации расстояние до каждой из вершин посчитано корректно. Ниже приведен каноничный псевдокод алгоритма. 
 
 \FloatBarrier
 \begin{algorithm}
@@ -50,7 +50,7 @@
 \Procedure{BFSBellmanFord}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
 \State $dist[start] \gets 0$
-\State $CurrentVertexSet \gets \left\{ {start}\right\}$\Comment{структура данных для хранения набора вершин} 
+\State $CurrentVertexSet \gets \left\{ {start}\right\}$\Comment{Набор вершин, расстояние до которых обновилось} 
 \State $NextVertexSet \gets \emptyset$ 
 \State {$step \gets 0$ }
 \While {$step < |G.vertices|$ \algorithmicand \algorithmicnot $ CurrentVertexSet.empty()$}
@@ -58,7 +58,7 @@
 	\State $NextVertexSet.clear()$
 	
 	\For{$v \in CurrentVertexSet$}
-		\For{$e \in G.edgesFrom[v] $} \Comment{исходящие ребра из текущей вершины} 
+		\For{$e \in G.edgesFrom[v] $} \Comment{Исходящие ребра из текущей вершины} 
 			\If {$dist[e.to] > dist[e.from] + e.w$} 
 				\State $dist[e.to] \gets dist[e.from] + e.w$
 				\State $NextVertexSet.insert(e.to)$								
@@ -86,7 +86,10 @@
 
 \FloatBarrier
 \subsection{Параллелизация по ребрам вершины}
-Первая версия алгоритма основана на параллельной обработке всех ребер, исходящих из текущей вершины. Псевдокод, который практически не отличается от классической версии, приведен ниже. 
+
+Прежде чем приступить к описанию параллельной версий выполним небольшую модификацию алгоритма. Будем для каждой вершины перебирать не исходящие ребра, а входящие. Это ход даст нам одно важное преимущество в контексте параллельных алгоритмов - значение кратчайшего расстояние до каждой вершины теперь может изменять лишь один поток, тогда как раньше могли несколько, что увеличивало потенциальные проблема с гонками за ресурс.
+
+Первая версия алгоритма основана на параллельной обработке всех ребер, исходящих из текущей вершины. Псевдокод, который уже использует идею из предыдущего абзаца, приведен ниже. 
 
 
 \FloatBarrier
@@ -101,17 +104,23 @@
 	\State {$changed \gets $ \algorithmicfalse}
 	\For{$v \in G.vertices $}
 		\algrenewcommand\algorithmicfor{\textbf{parfor}}
-		\For{$e \in G.fromEdges[v] $} 
-			\If {$dist[e.to] < dist[e.from] + e.w$} 
-				\State $dist[e.to] \gets dist[e.from] + e.w$
-				\State {$changed \gets $ \algorithmictrue}						
-			\EndIf
+		\State $minDist \gets dist[v]$
+
+		\For{$e \in G.edgesTo[v] $} \Comment{Входящие ребра в текущую вершину} 
+			\State $minDist \gets \min(minDist, dist[e.from] + e.w)$
 		\EndFor	
+					
+		\If {$dist[v] > minDist$} 
+			\State $dist[v] \gets minDist$ \Comment{Атомарно} 
+
+			\State {$changed \gets $ \algorithmictrue}					
+		\EndIf
+
 		\algrenewcommand\algorithmicfor{\textbf{for}}
 
 	\EndFor
 	\If {\algorithmicnot $changed$} 
-		\State $break$
+		\State \textbf{break}
 	\EndIf
 
 \EndFor
@@ -122,20 +131,21 @@
 
 \FloatBarrier
 \subsection{Параллелизация по всем ребрам}
-Идея второго алгоритма состоит в разбиений всего набора вершин на некоторые подмножества, каждое из которых будет обрабатываться отдельным процессором. При этом для каждой вершины будем рассматривать набор ребер, входящих в нее. Это необходимо для того, чтобы обновление фиксированной ячейки в массиве расстояний происходило только одним потоком. 
+Идея второго алгоритма состоит в разбиений всего набора вершин на некоторые подмножества, каждое из которых будет обрабатываться отдельным процессором. При этом опять же, как и в предыдущем алгоритме, для каждой вершины будем рассматривать набор ребер, входящих в нее. 
 
 \FloatBarrier
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{Параллельный Беллман-Форд по всем ребрам}\label{bf_classic_par2}
 \begin{algorithmic}[1]
 \Procedure{BellmanFordPar2}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
 \State $dist[start] \gets 0$
 \State {$prefsum \gets $ prefix sum by vertices incoming degree} 
-\State {$planMap \gets $ \Call {BuildPlan}{$prefsum$, 0, |$G.vertices$|}} 
+\State {$planMap \gets $ empty map}
+\State \Call {BuildPlan}{$prefsum$, 0, |$G.vertices$|, planMap}
 
 \For{$i = 0$ to $|G.vertices| $}	
-	\If {\algorithmicnot \Call {ProcessLayer}{$G, planMap, prefsum, 0, |G.vertices|$}} 
+	\If {\algorithmicnot \Call {ProcessLayer}{$G, dist, planMap, prefsum, 0, |G.vertices|$}} 
 		\State \textbf{break}
 	\EndIf
 		
@@ -144,29 +154,52 @@
 \EndProcedure
 
 \State 
-\Procedure{BuildPlan}{$prefsum, startV, endV$}  \Comment{Функция возвращают структуру, которая по отрезку возвращает его середину}
-\State {$resultMap \gets $ empty map}
+\Procedure{BuildPlan}{$prefsum, startV, endV, resultMap$}  \Comment{Функция возвращают структуру (хэш-таблицу), которая по отрезку возвращает его середину}
 \State $edgesNumber \gets prefsum[endV] - prefsum[startV]$
 \If {$edgesNumber < threshold$} 
-	\State $midV \gets $ binary search by edges number
+	\State $midV \gets $ Бинарным поиском по массиву prefsum находим индекс вершины $midV$, что $prefsum[midV]-prefsum[startV] \approx prefsum[endV]-prefsum[midV]$
 	\State $resultMap[startV][endV] \gets midV$ 
-	\State {$resultMap.addAll($ \Call {BuildPlan}{$prefsum, startV, midV$})} 
-	\State {$resultMap.addAll($ \Call {BuildPlan}{$prefsum, midV, endV$})} 
+	\State \Call {BuildPlan}{$prefsum, startV, midV, resultMap$} 
+	\State {\Call {BuildPlan}{$prefsum, midV, endV, resultMap$}} 
 \EndIf
 
 \State \textbf{return} $resultMap$
 \EndProcedure
 
 \State 
-\Procedure{ProcessLayer}{$G, planMap, prefsum, startV, endV$}  
+\Procedure{ProcessLayer}{$G, dist, planMap, prefsum, startV, endV$}  
 \State $edgesNumber \gets prefsum[endV] - prefsum[startV]$
 \If {$edgesNumber < threshold$} 
-	\State process vertices sequentally 	
+	\State {\textbf{return} {\Call {ProcessVerticesSequentially}{$G, dist, startV, endV$}}}
 \Else	
 	\State $midV \gets planMap[startV][endV]$ 
-	\State {\Call {ProcessLayer}{$G, planMap, prefsum, startV, midV$}}
-	\State {\Call {ProcessLayer}{$G, planMap, prefsum, midV, endV$}}
+	\State {$changed \gets $ \algorithmicfalse}
+
+	\State {$changed = changed $ \algorithmicor \Call {ProcessLayer}{$G, dist, planMap, prefsum, startV, midV$}}
+	\State {$changed = changed $ \algorithmicor \Call {ProcessLayer}{$G, dist, planMap, prefsum, midV, endV$}}
+	\State \textbf{return} $changed$
 \EndIf
+
+\EndProcedure
+
+\State 
+\Procedure{ProcessVerticesSequentially}{$G, dist, startV, endV$}  
+
+\State {$changed \gets $ \algorithmicfalse}
+\For{$v = startV$ to $endV - 1 $}
+		\State $minDist \gets dist[v]$
+
+		\For{$e \in G.edgesTo[v] $} \Comment{Входящие ребра в текущую вершину} 
+			\State $minDist \gets \min(minDist, dist[e.from] + e.w)$
+		\EndFor	
+					
+		\If {$dist[v] > minDist$} 
+			\State $dist[v] \gets minDist$ \Comment{Атомарно} 
+
+			\State {$changed \gets $ \algorithmictrue}					
+		\EndIf
+\EndFor
+\State \textbf{return} $changed$
 
 \EndProcedure
 
@@ -175,7 +208,7 @@
 
 \FloatBarrier
 \subsection{Параллелизация BFS - версии}
-Предыдущие две версии были основаны на параллелизации классической версии Беллмана-Форда. В основе следующего алгоритма лежит идея обхода в ширину (Алгоритм 2). В качестве основы для параллельной версии такого алгоритма был взят параллельный обход в ширину, предложенный Умутом Акаром и Майком Рэйни. Подробнее о внутреннем устройстве их подхода речь зайдет во 2 части работы в контексте решения задачи поиска расстояний между каждой парой вершин. Пока лишь приведем псевдокод 
+Предыдущие две версии были основаны на параллелизации классической версии Беллмана-Форда. В основе следующего алгоритма лежит идея обхода в ширину (Алгоритм 2). В качестве основы для параллельной версии такого алгоритма был взят параллельный обход в ширину, предложенный Умутом Акаром и Майком Рэйни. А именно в качестве ключевой структуры данных используется Frontier, который представляет из себя набор всех ребер, исходящих из некоторого множества вершин. И эта структура данных поддерживает разделение, слияния и итерирование по ребрам. Подробнее о внутреннем устройстве их подхода речь зайдет во 2 части работы в контексте решения задачи поиска расстояний между каждой парой вершин. Пока лишь приведем псевдокод 
 
 \FloatBarrier
 \begin{algorithm}
@@ -184,13 +217,13 @@
 \Procedure{BellmanFordPar3}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
 \State $dist[start] \gets 0$
-\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}\Comment{структура данных для хранения исходящих ребер текущего множества } 
+\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}\Comment{Структура данных для хранения исходящих ребер текущего множества } 
 
 \For{$i = 0$ to $|G.vertices| $}	
-	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier$}}} \Comment{релаксируем ребра из фронтира и строим новый} 
+	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier$}}} \Comment{Релаксируем ребра из фронтира и строим новый} 
 	
 	\If { $Frontier.empty()$} 
-		\State $break$						
+		\State \textbf{break}						
 	\EndIf
 		
 		
@@ -199,7 +232,7 @@
 \EndProcedure
 \State
 \Procedure{HandleFrontier}{$Frontier$}
-\State recursively divide current frontier, atomically relax edges in frontier and building a new one
+\State Рекурсивно делим Frontier пополам, атомарно рекаксируем ребра и строим новый Frontier
 
 \State \textbf{return} $NewFrontier$
 \EndProcedure
@@ -214,44 +247,44 @@
 
 С первого взгляда может показаться, что Алгоритм 3 имеет лишь одни недостатки - он имеет наименьшим образом по сравнению с последующими задействует все процессоры и при этом асимптотически равен остальным двум. Однако рассмотрим внимательнее каноничный аглоритм Беллмана-Форда и запустим его на плотном графе, где для каждого ребра верно, что индекс вершины источника меньше индекса вершины назначения. В этом случае каноничной версии достаточно будет сделать лишь две итерации внешнего цикла, поскольку на каждой итераций внутреннего цикла значение расстояния для текущей вершины будет корректно посчитано (очевидно доказывается по математической индукции). Так как количество итерации третьего алгоритма в подобных графах может быть значительным и размер текущей очереди может быть большим, а второму же алгоритму на таких графах неплохая способность параллелиться будет только вредить - она будет заметно увеличивать число итераций внешнего цикла. То есть в таких случаях последние два алгоритма работают хуже первого.   
 
-Но очевидно, что в большинстве случаев последние два алгоритма будут показывать лучшие результаты. Сравним эти два подхода. Алгоритм, основанный на обходе в ширину, заметно сокращает количество вершин для обработки в пределах каждой итерации. Однако на плотных графах количество таких вершин значительно и такой подход показывает себя не с лучшей стороны. 
+Но очевидно, что в большинстве случаев последние два алгоритма будут показывать лучшие результаты. Сравним эти два подхода. Алгоритм, основанный на обходе в ширину, заметно сокращает количество вершин для обработки в пределах каждой итерации, что дает заметное преимущество на разреженных графах по сравнению с Алгоритмом 4, где на каждом шаге обрабатываются все ребра. Однако на плотных графах количество таких вершин значительно, что негативно сказывается на производительностью алгоритма в силу множественных и трудоемких операций с памятью. То есть такой подход показывает себя не с лучшей стороны в подобных графах.  
 
 \FloatBarrier
 \subsection{Тестирование}
 
-Для подтверждения вышеприведенных замечаний все вышеизложенные подходы были реализованы на основе библиотеки для параллельных вычислений PASL. Тестирование производилось на ряде графов на машине 40-core Intel machine (with hyper-threading) with 4×2.4GHz Intel
+Для подтверждения вышеприведенных замечаний все вышеизложенные подходы были реализованы на основе библиотеки для параллельных вычислений PASL. В качестве языка использовался C++. Тестирование производилось на ряде графов на машине 40-core Intel machine (with hyper-threading) with 4×2.4GHz Intel
 10-core E7-8870 Xeon processors, a 1066MHz bus, and 256GB of
 main memory. 
 
 Алгоритмы тестировались на различных графовых структурах, которые перечислены в Таблице 1.1. При этом описание для формата приведено внизу таблицы.
-\begin{table}
-\centering
 
-\begin{tabular}{c|c|c}  
-Name & Vertices & Edges\\
+\FloatBarrier
+\begin{table}[H]
+\centering
+\begin{tabular}{c | c | c | l}  
+Название & Вершины & Ребра & Описание\\
 \hline\hline
-Complete TS & 7071 & 24995985 \\  
-Complete sign & 3162 & 9995082  \\  
-BalancedTree fraction & 8388607 & 8388608 \\  
-SquareGrid sign & 2499561 & 4999122  \\  
-RandomSparse fraction(0.5) sign & 2500000 & 25000000  \\  
-RandomSparse fraction(0.96) sign(+) & 2500000 & 25000000  \\  
-RandomDense fraction(0.5) sign & 5000 & 25000000  \\  
-RandomDense fraction(0.96) sign(+) & 5000 & 25000000  \\  
+Complete TS & 7071 & 24995985 & Полный граф с fraction = 1 (TopSorted)\\  
+Complete + & 3162 & 9995082 & Полный граф с положительным весом ребер \\  
+Complete - & 3162 & 9995082 & Полный граф с случайным весом ребер \\  
+BalancedTree F & 8388607 & 8388608 & Сбалансирование дерево с fraction = F \\  
+SquareGrid + & 2499561 & 4999122 & Квадратная решетка с положительными ребрами \\  
+SquareGrid - & 2499561 & 4999122 & Квадратная решетка с случайными ребрами \\  
+RandomSparse 0.5+ & 2500000 & 25000000 & \pbox{9cm}{Случайный разреженный граф с положительными ребрами и fraction = 0.5\\}  \\  
+RandomSparse 0.5- & 2500000 & 25000000 & \pbox{9cm}{Случайный разреженный граф с любыми ребрами и fraction = 0.5\\}  \\  
+RandomSparse 0.96+ & 2500000 & 25000000 & \pbox{9cm}{Cлучайный разреженный граф с положительными ребрами и fraction = 0.96\\} \\  
+RandomDense 0.5+ & 5000 & 25000000 & \pbox{9cm}{Случайный плотный граф с положительными ребрами и fraction = 0.5\\}  \\  
+RandomDense 0.5- & 5000 & 25000000 & \pbox{9cm}{Случайный плотный граф с любыми ребрами и fraction = 0.5\\}  \\  
+RandomDense 0.96+ & 5000 & 25000000 & \pbox{9cm}{Случайный плотный граф с положительными ребрами и fraction = 0.96\\}  \\  
 \hline
-\multicolumn{3}{l}{\footnotesize \textit{sign} - sign of weights on edges }\\
-\multicolumn{3}{l}{\footnotesize \textit{fraction} - fraction of lexicographically sorted edges (edges of type X -> X+i) }\\
-\multicolumn{3}{l}{\footnotesize \textit{TS} - exists only Lexicographically Sorted edges (fraction = 1) }\\
-\multicolumn{3}{l}{\footnotesize }\\
-\multicolumn{3}{l}{\footnotesize  expression \textit{RandomDense fraction(0.5) sign} means Random Dense }\\
-\multicolumn{3}{l}{\footnotesize 	graph with specified fraction and any sign of weights}\\
+\multicolumn{4}{l}{\footnotesize \textit{fraction} - Доля лексикографически отсортированных ребер (ребра вида $V \rightarrow V+i$) }\\
 \end{tabular}
 
 \caption{Input graph description}
 \label{bf_algo_comparison}
 \end{table}
-
-\begin{table}
+\FloatBarrier
+\begin{table}[H]
 \centering
 
 \begin{tabular}{l|ccc|cc|cc|ccc|ccc}  
