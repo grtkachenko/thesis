@@ -56,64 +56,15 @@
 \begin{frame}[fragile]
   \frametitle{Обзор решений}
 \begin{itemize}
-    \item Алгоритм Дейкстры
     \item Алгоритм Беллмана-Форда
+    \begin{itemize}
+    	\item Классический
+    	\item На основе обхода в ширину
+	\end{itemize}	   
+	\item Алгоритм Дейкстры
     \item Алгоритм Джонсона (Дейкстра с потенциалами)
     \item Алгоритмы A* и D*
   \end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{Классический Беллман-Форд}
-\begin{algorithm}[H]
-\begin{algorithmic}[1]
-\Procedure{ClassicBellmanFord}{$G,start$}
-\State {$dist \gets \left\{ {\infty ... \infty}\right\}$}
-\State {$dist[start] \gets 0$}
- 
-\For{$i = 0$ to $|G.vertices| - 1 $}
-	\For{$e \in G.edges $}
-		\State $dist[e.to] \gets \min(dist[e.to], dist[e.from] + e.w)$
-	\EndFor
-\EndFor
-\State \textbf{return} $dist$
-\EndProcedure
-\end{algorithmic}
-\end{algorithm}
-\end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{BFS Беллман-Форд}
-\begin{algorithm}[H]
-\begin{algorithmic}[1]
-
-\Procedure{BFSBellmanFord}{$G,start$}
-\State $dist\gets \left\{ {\infty ... \infty}\right\}$
-\State $dist[start] \gets 0$
-\State $CurrentVertexSet \gets \left\{ {start}\right\}$
-\State $NextVertexSet \gets \emptyset$ 
-\While {$CurrentVertexSet.empty()$}
-	\State $NextVertexSet.clear()$
-	
-	\For{$v \in CurrentVertexSet$}
-		\For{$e \in G.edgesFrom[v] $} 
-			\If {$dist[e.to] > dist[e.from] + e.w$} 
-				\State $dist[e.to] \gets dist[e.from] + e.w$
-				\State $NextVertexSet.insert(e.to)$								
-			\EndIf
-		\EndFor
-	\EndFor
-	
-	\State $CurrentVertexSet \gets NextVertexSet$	
-\EndWhile
-\State \textbf{return} $dist$
-
-\EndProcedure
-
-
-
-\end{algorithmic}
-\end{algorithm}
 \end{frame}
 
 \begin{frame}[fragile]
@@ -227,14 +178,10 @@
   \frametitle{Динамика для большего множества}
     \begin{itemize}
     	\item Посчитаем расстояние от базовой вершины до всех других
-    	\item Каждая из вершин $u$ может находится только в $[dist[base][u]-K, dist[base][u]+K]$ слоях
 		\item Будем поддерживать две динамики $mask$ и $calc$. Причем $mask[u][i]$ - сабсет вершин, расстояние от которых до $u$ равно $i$. В свою очередь $calc[u][i]$ - не более $i$
 	\end{itemize}
-\end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{Пересчет значении динамики}
-\begin{equation}
+	
+	\begin{equation}
 mask[v][i] = \neg calc[v][i - 1] \wedge \bigvee_{\exists (u, v) \in E} mask[u][i - 1] 
 \end{equation}
 
@@ -244,21 +191,7 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 
 \end{frame}
 
-\begin{frame}[fragile]
-  \frametitle{Преимущества подхода}
-\begin{itemize}
-  \item Пересчет расстояний для группы вершин выполняется быстрее за счет битовых операций.   
-  \item Все битовые операции выполняются без выделения дополнительной памяти. 
-  \item Нет необходимости в построении следующего фронтира по предыдущему в процессе обработки
-  \item Каждый из получившихся фронтиров довольно большой, что увеличивает его способность к параллелизации
-  \item Все остальные этапы также хорошо параллелятся
-\end{itemize}
-
-\end{frame}
-
-
 \section{Результаты}
-
 \begin{frame}[fragile]
   \frametitle{Сравнение параллельных версий Беллмана-Форда}
 \begin{table}
