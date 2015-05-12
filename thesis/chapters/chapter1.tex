@@ -208,19 +208,30 @@
 
 \FloatBarrier
 \subsection{Параллелизация BFS - версии}
-Предыдущие две версии были основаны на параллелизации классической версии Беллмана-Форда. В основе следующего алгоритма лежит идея обхода в ширину (Алгоритм 2). В качестве основы для параллельной версии такого алгоритма был взят параллельный обход в ширину, предложенный Умутом Акаром и Майком Рэйни. А именно в качестве ключевой структуры данных используется Frontier, который представляет из себя набор всех ребер, исходящих из некоторого множества вершин. И эта структура данных поддерживает разделение, слияния и итерирование по ребрам. Подробнее о внутреннем устройстве их подхода речь зайдет во 2 части работы в контексте решения задачи поиска расстояний между каждой парой вершин. Пока лишь приведем псевдокод 
+Предыдущие две версии были основаны на параллелизации классической версии Беллмана-Форда. В основе следующего алгоритма лежит идея обхода в ширину (Алгоритм 2). В качестве основы для параллельной версии такого алгоритма был взят параллельный обход в ширину, предложенный Умутом Акаром и Майком Рэйни. 
+
+
+Ключевым моментом в алгоритме является использованием структуры данных Frontier. Она подробно рассмотрена в статье Умут Акара. Здесь же приведено краткое ее описание, основные принципы работы и интерфейс. Frontier представляет из себя некоторый набор ребер. При этом он поддерживает операций разделения множества пополам, слияния множеств, добавления ребер вершины и итерирования по ребрам. При этом  операций слияния и разбиения выполняются за время пропорциональное $O(\log n)$, добавление ребер вершины происходит за константу, а итерирование за константу для каждого ребра. Такая асимптотика достигается за счет лежащей в основе bootstrapped chunked sequence, которая представляет из себя последовательность, где каждому элементу сопоставляется его вес. И операций слияния и разбиения выполняются в соответсвии с этими весами и выполняются за $O(\log n)$. Более подробное описание bootstrapped chunked sequence приведено в статье. 
+
+Кроме того, в алгоритме используются возможности библиотеки для параллельных вычислений PASL взаимодействия между несколькими потоками. А именно каждый из потоков может понимать нуждаются ли в "помощи" другие потоки. И в случае положительного ответа он может "поделиться" данными для вычислений. 
+
+Таким образом, псевдокод алгоритма выглядит следующим образом
 
 \FloatBarrier
-\begin{algorithm}
+\begin{algorithm}[H]
 \caption{Параллельный BFS-подобный Беллман-Форд}\label{bf_bfs_par}
 \begin{algorithmic}[1]
 \Procedure{BellmanFordPar3}{$G,start$}
 \State $dist\gets \left\{ {\infty ... \infty}\right\}$
+\State $layerForVertex\gets \left\{ {-1 ... -1}\right\}$ \Comment{Номер последнего уровня, в котором посетили вершину} 
 \State $dist[start] \gets 0$
-\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}\Comment{Структура данных для хранения исходящих ребер текущего множества } 
+\State $layerForVertex[start] \gets 0$
+\State {$Frontier \gets \left\{ {G.edgesFrom(start)}\right\}$}\Comment{Исходящие ребра текущего множества } 
 
-\For{$i = 0$ to $|G.vertices| $}	
-	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier$}}} \Comment{Релаксируем ребра из фронтира и строим новый} 
+\For{$layer = 1$ to $|G.vertices| $}	
+	\State $NextFrontier \gets \emptyset$
+
+	\State {$Frontier \gets $  {\Call {HandleFrontier}{$Frontier, NextFrontier, layer, dists, layerForVertex$}}} 
 	
 	\If { $Frontier.empty()$} 
 		\State \textbf{break}						
@@ -231,10 +242,48 @@
 \State \textbf{return} $dist$
 \EndProcedure
 \State
-\Procedure{HandleFrontier}{$Frontier$}
-\State Рекурсивно делим Frontier пополам, атомарно рекаксируем ребра и строим новый Frontier
 
-\State \textbf{return} $NewFrontier$
+\Procedure{HandleFrontier}{$CurFrontier, NextFrontier, layer, dists, layerForVertex$}
+\While {\algorithmicnot $CurFrontier.empty()$}
+	\If {$hasIncomingQuery()$}
+		\If {$CurFrontier.nbEdges() \leq cutoff$}
+			\State $rejectQuery()$			
+		\Else		
+			\State $NewCurFrontier \gets \emptyset$
+			\State $NewNextFrontier \gets \emptyset$
+			\State $CurFrontier.split(NewCurFrontier)$
+			\State \begin{varwidth}[t]{\linewidth}fork2(\par
+        \hskip\algorithmicindent {\Call {HandleFrontier}{$CurFrontier, NextFrontier, layer, dists, layerForVertex$}},\par
+        \hskip\algorithmicindent {\Call {HandleFrontier}{$NewCurFrontier, NewNextFrontier, layer, dists, layerForVertex$}});
+      \end{varwidth}
+ 			\State $NextFrontier.split(NewNextFrontier)$
+
+		\EndIf
+		
+	\EndIf
+	\State Frontier.iterNumber(pollingCutoff, updateFunction(from, to, weight, layer, dists, layerForVertex))
+\EndWhile
+\EndProcedure
+\State
+\Procedure{UpdateFunction}{$from, to, weight, layer, dists, layerForVertex, NextFrontier$}
+\If {{\Call {TryToUpdateDistance}{$to, dists[from] + weight, dists$}}} 
+
+	\If {{\Call {TryToSetVisited}{$to, layer, layerForVertex$}}} 
+		\State $NextFrontier.pushEdgesOf(to)$
+	\EndIf
+	
+\EndIf
+\EndProcedure
+\State
+\Procedure{TryToSetVisited}{$vertex, layer, layerForVertex$}
+\If {\algorithmicnot $layerForVertex[vertex] = layer$} 
+	\State \textbf{return} {$cas(layerForVertex[vertex], layerForVertex[vertex], layer)$ }  
+\EndIf
+\State \textbf{return} {\algorithmicfalse}  
+\EndProcedure
+\State
+\Procedure{TryToUpdateDistance}{$vertex, candidate, dists$}
+\State \textbf{return} {$writeMin(dists[vertex], candidate)$} \Comment Атомарный минимум 
 \EndProcedure
 
 \end{algorithmic}
@@ -256,8 +305,7 @@
 10-core E7-8870 Xeon processors, a 1066MHz bus, and 256GB of
 main memory. 
 
-Алгоритмы тестировались на различных графовых структурах, которые перечислены в Таблице 1.1. При этом описание для формата приведено внизу таблицы.
-
+Алгоритмы тестировались на различных графовых структурах, которые перечислены в Таблице 1.1. 
 \FloatBarrier
 \begin{table}[H]
 \centering
@@ -304,7 +352,7 @@ Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \mul
 \FloatBarrier
 \section{Выводы}
 
-Из таблиц видно, что наши ожидания относительно применимости конкретных подходов оправдались. Первый из алгоритмов работает лучше на узком спектре графов с высоким fraction и высокой средней степенью вершины, второй хорошо работает на плотных графах и графах с отрицательным весом ребер, третий же заметно лучше остальных на разреженных графах.
+Из таблиц видно, что наши ожидания относительно применимости конкретных подходов оправдались. Первый из алгоритмов работает лучше на узком спектре графов с высоким $fraction$ и высокой средней степенью вершины, второй хорошо работает на плотных графах и графах с отрицательным весом ребер, третий же заметно лучше остальных на разреженных графах.
 
 Таким образом сделав простой анализ структуры графа мы сможем выбрать необходимый алгоритм для поиска кратчайшего пути. 
 \FloatBarrier
