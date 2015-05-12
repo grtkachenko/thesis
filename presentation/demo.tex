@@ -177,8 +177,9 @@
 \begin{frame}[fragile]
   \frametitle{Динамика для большего множества}
     \begin{itemize}
-    	\item Посчитаем расстояние от базовой вершины до всех других
-		\item Будем поддерживать две динамики $mask$ и $calc$. Причем $mask[u][i]$ - сабсет вершин, расстояние от которых до $u$ равно $i$. В свою очередь $calc[u][i]$ - не более $i$
+		\item $mask[u][i]$ --- множество вершин, расстояние от которых до $u$ равно $i$ 
+		\item $calc[u][i]$ --- не более $i$
+		\item Для вершины $u$ имеют смысл расстояния $[d - K, d + K]$, где $d = dist[base][u]$
 	\end{itemize}
 	
 	\begin{equation}
@@ -197,14 +198,14 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \begin{table}
 \centering
 \begin{tabular}{l|ccc|cc|cc}  
-Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \multicolumn{2}{c}{SquareGrid} \\
-& TS & + & - & 0.5 & 1 & + & +- \\
+Идея алгоритма& \multicolumn{3}{c}{Полный} & \multicolumn{2}{c}{Дерево} & \multicolumn{2}{c}{Решетка} \\
+& TS & + & +- & 0.5 & 1 & + & +- \\
 \hline\hline
-1 & 2.43 & 4.65 & nc & 116.31 & 9.04 & 5.49 & 13.40\\  
-2 & 5.17 & 0.18 & 10.84 & 3.59 & 3.08 & 5.92 & 7.10  \\
-3 & 44.63 & 0.37 & 23.55 & 0.44 & 0.31 & 4.42 & 0.58 \\
+Ребра вершины & 2.43 & 4.65 & $\infty$ & 116.31 & 9.04 & 5.49 & 13.40\\  
+Все ребра & 5.17 & 0.18 & 10.84 & 3.59 & 3.08 & 5.92 & 7.10  \\
+Обход в ширину & 44.63 & 0.37 & 23.55 & 0.44 & 0.31 & 4.42 & 0.58 \\
 \end{tabular}
-\caption{Типичные графы}
+\caption{Классические графы}
 \label{graph_description}
 \end{table}
 
@@ -212,12 +213,12 @@ Algo №& \multicolumn{3}{c}{Complete} & \multicolumn{2}{c}{BalancedTree} & \mul
 \begin{table}
 \centering
 \begin{tabular}{l|ccc|ccc}  
-Algo №& \multicolumn{3}{c}{RandomSparse} & \multicolumn{3}{c}{RandomDense}\\
+Идея алгоритма& \multicolumn{3}{c}{Разреженный} & \multicolumn{3}{c}{Плотный}\\
 & 0.5+  & 0.5- & 0.96+ & 0.5+ & 0.5- & 0.96+\\
 \hline\hline
-1 & nc & nc & 24.35 & nc & nc & 5.01 \\  
-2 & 2.77 & 14.68 & 2.42 & 0.48  & 6.38  & 0.46 \\
-3 & 0.98 & 22.59 & 0.76  & 0.60  & 10.25 & 0.71 \\
+Ребра вершины & $\infty$ & $\infty$ & 24.35 & $\infty$ & $\infty$ & 5.01 \\  
+Все ребра & 2.77 & 14.68 & 2.42 & 0.48  & 6.38  & 0.46 \\
+Обход в ширину & 0.98 & 22.59 & 0.76  & 0.60  & 10.25 & 0.71 \\
 \end{tabular}
 \caption{Случайные графы}
 \label{graph_description}
@@ -233,9 +234,9 @@ Algo №& \multicolumn{3}{c}{RandomSparse} & \multicolumn{3}{c}{RandomDense}\\
 \centering
 
 \begin{tabular}{l|c}  
-Алгоритм & Twitter graph\\
+Алгоритм & "Twitter graph"\\
 \hline\hline
-Наивная параллельная версия & 427.217 \\  
+Стандартная параллельная версия & 427.217 \\  
 Алгоритм для социальных графов & 210.322  \\
 \hline
 \end{tabular}
@@ -245,8 +246,6 @@ Algo №& \multicolumn{3}{c}{RandomSparse} & \multicolumn{3}{c}{RandomDense}\\
 \end{table}
   
 \end{frame}
-
-\section{Выводы}
 
 
 \plain{}{Вопросы?}
