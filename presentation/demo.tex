@@ -116,13 +116,12 @@
 \State \textbf{return} {\Call {HandleVertices}{$G, 0, |G.vertices|$}}
 \EndProcedure
 \State
-\Procedure{HandleVertices}{$G, startVertex, endVertex$}
+\Procedure{HandleVertices}{$G, startV, endV$}
 
-\If {$endVertex - startVertex < threshold$} 
-	\State $distances \gets$ run Bellman-Ford for $[startVertex, endVertex)$
-	\State \textbf{return} $distances$	
+\If {$endV - startV < threshold$} 
+	\State run Bellman-Ford for $[startV, endV)$
 \Else	
-	\State $midV \gets (startVertex + endVertex) / 2$ 
+	\State $midV \gets (startV + endV) / 2$ 
 	\State \begin{varwidth}[t]{\linewidth}fork2(\par
         \hskip\algorithmicindent {\Call {HandleVertices}{$G, startV, midV$}},\par
         \hskip\algorithmicindent {\Call {HandleVertices}{$G, midV, endV$}});
@@ -133,12 +132,6 @@
 \EndProcedure
 \end{algorithmic}
 \end{algorithm}
-\end{frame}
-
-\begin{frame}[fragile]
-  \frametitle{Алгоритм для объединенного графа}
-    {\vspace{-2em}\begin{center}\includegraphics[width=\textwidth]{images/floyd_par_2.png}\end{center}}
-
 \end{frame}
 
 \begin{frame}[fragile]
