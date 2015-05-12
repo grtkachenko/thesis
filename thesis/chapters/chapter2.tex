@@ -256,21 +256,14 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \FloatBarrier
 Наконец, как по имеющимся данным динамики восстановить ответ? Для каждого значения $mask[u][i]$ найдем единичные биты в маске. Установленный в единицу бит $j$ говорит о том, что расстояние от вершины из "большого" множества с идентификатором $j$ до вершины $u$ равно $i$. Таким образом, мы сможем полностью восстановить ответ для каждой вершины. 
 
-
-Итого, псевдокод алгоритма выглядит следующим образом.
+Важным замечанием к коду является последовательность выполнения циклов в последней части алгоритма. Рассмотрим на примере как происходит обращение к памяти в двух различных вариантах (Алгоритм 11 и Алгоритм 12), при этом выполняющих совершенно одно и то же. Заметим, что в этих алгоритмах отличается порядок параллельных циклов. 
 
 \FloatBarrier
 \begin{algorithm}
-\caption{Параллельная версия для социальных графов}\label{all_pairs_social}
+\caption{Заполнение массива ответа по динамика (1 вариант)}\label{all_pairs_social}
 \begin{algorithmic}[1]
 
-\Procedure{AllPairsSocialPar}{$G$}
-\State $dist\gets \left\{ {   \left\{ {\infty \ldots \infty}\right\}  \ldots \left\{ {\infty \ldots \infty}\right\} }\right\}$
-\State {$ baseVertex, handleByBaseVertexSet, otherVertexSet \gets ConstructSets(G)$}
-\State {\Call {AllPairsPar1}{$G, otherVertexSet, dist$}} \Comment {Наивный алгоритм для множества вершин}
-\State {\Call {CalculateDistancesForBigSet}{$G, baseVertex, otherVertexSet, dist$}}
-
-\State
+\Procedure{FillDistances1}{$G, dist, mask, baseVertex, handleByBaseVertexSet$}
 \algrenewcommand\algorithmicfor{\textbf{parfor}}
 \For{$v = 0$ to $|G.vertices|$}
 \algrenewcommand\algorithmicfor{\textbf{for}}
@@ -284,6 +277,49 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 		\algrenewcommand\algorithmicfor{\textbf{for}}
 	\EndFor
 \EndFor 
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\FloatBarrier
+\begin{algorithm}
+\caption{Заполнение массива ответа по динамика (2 вариант)}\label{all_pairs_social}
+\begin{algorithmic}[1]
+
+\Procedure{FillDistances2}{$G, dist, mask, baseVertex, handleByBaseVertexSet$}
+\algrenewcommand\algorithmicfor{\textbf{parfor}}
+\For{$u \in handleByBaseVertexSet$}
+\algrenewcommand\algorithmicfor{\textbf{for}}
+	\For{$j = dist[baseVertex][i] - K$ to $dist[baseVertex][i] + K$}	
+		\algrenewcommand\algorithmicfor{\textbf{parfor}}	
+		\For{$v = 0$ to $|G.vertices|$}
+			\If {$mask[v][j].getBit(bitNum(u)) = 1$}
+				\State $dist[u][v] = j$		
+			\EndIf	
+		\EndFor
+		\algrenewcommand\algorithmicfor{\textbf{for}}
+	\EndFor
+\EndFor 
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+\FloatBarrier
+
+Так как некоторый $mask[i][j]$ представляет из себя область последовательной памяти, то в случае первого варианта процессор будет работать при вызове методов $getBit$ именно с последовательной памятью, в то время как вторая версия будет обращаться к различным элементам матрицы $mask$ и тем самым к разным участками памяти, что, заметно медленнее в силу специфик устройства вычислительной машины. Это замечание было подтверждено и на практике - алгоритм со второй реализаций работает (на той же машине, которая упоминалась в контексте тестирования параллельного Беллмана-Форда) в среднем в 1.5 раза дольше, чем с первым вариантом.
+
+Итого, псевдокод алгоритма выглядит следующим образом.
+
+\FloatBarrier
+\begin{algorithm}
+\caption{Параллельная версия для социальных графов}\label{all_pairs_social}
+\begin{algorithmic}[1]
+
+\Procedure{AllPairsSocialPar}{$G$}
+\State $dist\gets \left\{ {   \left\{ {\infty \ldots \infty}\right\}  \ldots \left\{ {\infty \ldots \infty}\right\} }\right\}$
+\State {$ baseVertex, handleByBaseVertexSet, otherVertexSet \gets ConstructSets(G)$}
+\State {\Call {AllPairsPar1}{$G, otherVertexSet, dist$}} \Comment {Наивный алгоритм для множества вершин}
+\State {\Call {CalculateDistancesForBigSet}{$G, baseVertex, otherVertexSet, dist$}}
+\State {\Call {FillDistances1}{$G, dist, mask, baseVertex, handleByBaseVertexSet$}}
 \State \textbf{return} $dist$ 
 \EndProcedure
 
@@ -312,7 +348,7 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 
 
 \FloatBarrier
-\begin{table}
+\begin{table}[H]
 \centering
 
 \begin{tabular}{l|c}  
