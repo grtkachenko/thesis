@@ -123,7 +123,7 @@
 \Else	
 	\State $midV \gets (startV + endV) / 2$ 
 	\State \begin{varwidth}[t]{\linewidth}fork2(\par
-        \hskip\algorithmicindent {\Call {HandleVertices}{$G, startV, midV$}},\par
+        \hskip\algorithmicindent {\Call {HandleVertices}{$G, startV, midV]$}},\par
         \hskip\algorithmicindent {\Call {HandleVertices}{$G, midV, endV$}});
       \end{varwidth}
 	
@@ -241,6 +241,14 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \end{frame}
 
 
-\plain{}{Вопросы?}
+\begin{frame}[fragile]
+  \frametitle{Итого}
+  \begin{itemize}
+    \item Разработаны параллельные версии Беллмана-Форда 
+    \item Разработан алгоритм для социальных графов
+    \item Алгоритмы показали высокую эффективность
+    \item Исследованы области применимости алгоритмов
+  \end{itemize}
+\end{frame}
 
 \end{document}
