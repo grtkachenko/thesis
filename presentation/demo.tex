@@ -9,6 +9,7 @@
 \usemintedstyle{trac}
 \usepackage{varwidth}
 \usepackage{xspace}
+\usepackage{xcolor}
 \usepackage{algpseudocode}
 \algnewcommand\algorithmicand{\textbf{and}\xspace}
 \algnewcommand\algorithmicor{\textbf{or}\xspace}
@@ -170,9 +171,10 @@
 \begin{frame}[fragile]
   \frametitle{Динамика для большего множества}
     \begin{itemize}
-		\item $mask[u][i]$ --- множество вершин, расстояние от которых до $u$ равно $i$ 
-		\item $calc[u][i]$ --- не более $i$
-		\item Для вершины $u$ имеют смысл расстояния $[d - K, d + K]$, где $d = dist[base][u]$
+    	\item Основана на битовых векторах
+		\item mask[v][i] --- множество вершин $U$, что $\forall u \in U, \ p(u, v) = i$
+		\item calc[v][i] $ \ \ $--- множество вершин $U$, что  $\forall u \in U, \ p(u, v) < i$
+		\item $O(V)$ битовых векторов
 	\end{itemize}
 	
 	\begin{equation}
@@ -186,6 +188,19 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \end{frame}
 
 \section{Результаты}
+
+\begin{frame}[fragile]
+  \frametitle{Технологии}
+\begin{itemize}
+    \item C++11
+    \item PASL (Parallel Algorithm Scheduling Library)
+    \item 40-core Intel machine (with hyper-threading) 
+  \end{itemize}
+\end{frame}
+
+
+\definecolor{cssgreen}{rgb}{0.0, 0.5, 0.0}
+
 \begin{frame}[fragile]
   \frametitle{Сравнение параллельных версий Беллмана-Форда}
 \begin{table}
@@ -194,9 +209,9 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 Идея алгоритма& \multicolumn{3}{c}{Полный} & \multicolumn{2}{c}{Дерево} & \multicolumn{2}{c}{Решетка} \\
 & TS & + & +- & 0.5 & 1 & + & +- \\
 \hline\hline
-Ребра вершины & 2.43 & 4.65 & $\infty$ & 116.31 & 9.04 & 5.49 & 13.40\\  
-Все ребра & 5.17 & 0.18 & 10.84 & 3.59 & 3.08 & 5.92 & 7.10  \\
-Обход в ширину & 44.63 & 0.37 & 23.55 & 0.44 & 0.31 & 4.42 & 0.58 \\
+Ребра вершины & \textcolor{cssgreen}{2.43} & 4.65 & $\infty$ & 116.31 & 9.04 & 5.49 & 13.40\\  
+Все ребра & 5.17 & \textcolor{cssgreen}{0.18} & \textcolor{cssgreen}{10.84} & 3.59 & 3.08 & 5.92 & 7.10  \\
+Обход в ширину & 44.63 & 0.37 & 23.55 & \textcolor{cssgreen}{0.44} & \textcolor{cssgreen}{0.31} & \textcolor{cssgreen}{4.42} & \textcolor{cssgreen}{0.58} \\
 \end{tabular}
 \caption{Классические графы}
 \label{graph_description}
@@ -210,8 +225,8 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 & 0.5+  & 0.5- & 0.96+ & 0.5+ & 0.5- & 0.96+\\
 \hline\hline
 Ребра вершины & $\infty$ & $\infty$ & 24.35 & $\infty$ & $\infty$ & 5.01 \\  
-Все ребра & 2.77 & 14.68 & 2.42 & 0.48  & 6.38  & 0.46 \\
-Обход в ширину & 0.98 & 22.59 & 0.76  & 0.60  & 10.25 & 0.71 \\
+Все ребра & 2.77 & \textcolor{cssgreen}{14.68} & 2.42 & \textcolor{cssgreen}{0.48}  & \textcolor{cssgreen}{6.38}  & \textcolor{cssgreen}{0.46} \\
+Обход в ширину & \textcolor{cssgreen}{0.98} & 22.59 & \textcolor{cssgreen}{0.76}  & 0.60  & 10.25 & 0.71 \\
 \end{tabular}
 \caption{Случайные графы}
 \label{graph_description}
@@ -226,11 +241,11 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \begin{table}
 \centering
 
-\begin{tabular}{l|c}  
-Алгоритм & "Twitter graph"\\
+\begin{tabular}{l|c|c}  
+Алгоритм & Twitter & Slashdot\\
 \hline\hline
-Стандартная параллельная версия & 427.217 \\  
-Алгоритм для социальных графов & 210.322  \\
+Стандартная параллельная версия & 427.217 & 254.567 \\  
+Алгоритм для социальных графов & \textcolor{cssgreen}{191.232} & \textcolor{cssgreen}{169.393}  \\
 \hline
 \end{tabular}
 
@@ -246,7 +261,7 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
   \begin{itemize}
     \item Разработаны параллельные версии Беллмана-Форда 
     \item Разработан алгоритм для социальных графов
-    \item Алгоритмы показали высокую эффективность
+    \item Алгоритмы показали высокую эффективность на практике
     \item Исследованы области применимости алгоритмов
   \end{itemize}
 \end{frame}
