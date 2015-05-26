@@ -212,8 +212,8 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 Ребра вершины & \textcolor{cssgreen}{2.43} & 4.65 & $\infty$ & 116.31 & 9.04 & 5.49 & 13.40\\  
 Все ребра & 5.17 & \textcolor{cssgreen}{0.18} & \textcolor{cssgreen}{10.84} & 3.59 & 3.08 & 5.92 & 7.10  \\
 Обход в ширину & 44.63 & 0.37 & 23.55 & \textcolor{cssgreen}{0.44} & \textcolor{cssgreen}{0.31} & \textcolor{cssgreen}{4.42} & \textcolor{cssgreen}{0.58} \\
+Ligra & 49.13 & 0.30 & 26.11 & 0.55 & 0.50 & 8.15 & 1.21 \\
 \end{tabular}
-\caption{Классические графы}
 \label{graph_description}
 \end{table}
 
@@ -222,13 +222,13 @@ calc[v][i] = calc[v][i - 1] \vee mask[v][i]
 \centering
 \begin{tabular}{l|ccc|ccc}  
 Идея алгоритма& \multicolumn{3}{c}{Разреженный} & \multicolumn{3}{c}{Плотный}\\
-& 0.5+  & 0.5- & 0.96+ & 0.5+ & 0.5- & 0.96+\\
+& 0.5+  & 0.5+- & 0.96+ & 0.5+ & 0.5+- & 0.96+\\
 \hline\hline
 Ребра вершины & $\infty$ & $\infty$ & 24.35 & $\infty$ & $\infty$ & 5.01 \\  
 Все ребра & 2.77 & \textcolor{cssgreen}{14.68} & 2.42 & \textcolor{cssgreen}{0.48}  & \textcolor{cssgreen}{6.38}  & \textcolor{cssgreen}{0.46} \\
-Обход в ширину & \textcolor{cssgreen}{0.98} & 22.59 & \textcolor{cssgreen}{0.76}  & 0.60  & 10.25 & 0.71 \\
+Обход в ширину & 0.59 & 22.59 & \textcolor{cssgreen}{0.48}  & 0.60  & 10.25 & 0.71 \\
+Ligra & \textcolor{cssgreen}{0.58} & 25.19 & 0.54 & 1.12  & 14.15 & 1.20 \\
 \end{tabular}
-\caption{Случайные графы}
 \label{graph_description}
 \end{table}
 
